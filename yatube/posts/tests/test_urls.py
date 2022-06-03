@@ -27,7 +27,7 @@ class TaskURLTests(TestCase):
         self.authorized_client.force_login(self.user)
 
     def test_response_urls(self):
-        """Проверка доступности на страницы: 
+        """Проверка доступности на страницы:
         index, group_list, profile."""
         url_names = [
             '/',
@@ -60,14 +60,14 @@ class TaskURLTests(TestCase):
     def test_urls_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
         template_url_names = {
-            'posts/index.html': '/',
-            'posts/group_list.html': '/group/test-group/',
-            'posts/profile.html': '/profile/auth/',
-            'posts/post_detail.html': '/posts/1/',
-            'posts/create_post.html': '/create/',
-            'posts/create_post.html': '/posts/1/edit/',
+            '/': 'posts/index.html',
+            '/group/test-group/': 'posts/group_list.html',
+            '/profile/auth/': 'posts/profile.html',
+            '/posts/1/': 'posts/post_detail.html',
+            '/create/': 'posts/create_post.html',
+            '/posts/1/edit/': 'posts/create_post.html',
         }
-        for template, address in template_url_names.items():
+        for address, template in template_url_names.items():
             with self.subTest(address=address):
                 response = self.authorized_client.get(address)
                 self.assertTemplateUsed(response, template)
