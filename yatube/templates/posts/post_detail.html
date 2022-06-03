@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}
+  {{ post.text|truncatechars:30 }}
+{% endblock %}
+{% block content %}
+  <article>
+    <li>
+      Дата публикации: {{ post.pub_date|date:"d E Y" }}
+    </li>
+    <li class="list-group-item">
+      Группа:
+      {% if post.group %}
+        {{ post.group }}</p>
+      {% endif %}
+      {% if not group and post.group %}
+        <a href="{% url 'posts:group_list' post.group.slug %}">все записи группы</a>
+      {% endif %}
+    </li>
+    <li>
+      Имя автор: {{ post.author.get_full_name }}
+    </li>
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      Всего постов автора: {{ user.posts.all.count }}
+    </li>
+    <li class="list-group-item">
+      <br><a href="{% url 'posts:profile' post.author %}">все посты пользователя</a>
+    </li>
+    <p>{{ post.text }}</p>
+    {% if post.author == request.user %}
+      <a class="btn btn-primary" href="{% url 'posts:post_edit' post.pk %}">
+        редактировать запись
+      </a> 
+    {% endif %}
+    {% if not forloop.last %}
+      <hr>
+    {% endif %}
+  <article>
+{% endblock %}
