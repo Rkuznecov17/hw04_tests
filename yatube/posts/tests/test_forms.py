@@ -13,15 +13,21 @@ class PostCreateFormTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create_user(username='hasnoname')
-        cls.group_1 = Group.objects.create(
-            title='Название группы_1 для теста',
-            slug='test-slug_1',
-            description='Тестовое описание группы_1'
+        cls.another_user = User.objects.create_user(username='noname')
+        cls.group = Group.objects.create(
+            title='Название группы для теста',
+            slug='test-slug',
+            description='Тестовое описание группы'
         )
-        cls.post_1 = Post.objects.create(
+        cls.edited_group = Group.objects.create(
+            title='Название группы после редактирования',
+            slug='test-edited',
+            description='Тестовое описание группы после редактирования'
+        )
+        cls.post = Post.objects.create(
             author=cls.user,
-            text='Тестовый текст для поста_1',
-            group=cls.group_1,
+            text='Тестовый текст для поста',
+            group=cls.group,
         )
         cls.form = PostForm()
 
@@ -37,8 +43,8 @@ class PostCreateFormTests(TestCase):
         """
         posts_count = Post.objects.count()
         form_data = {
-            'text': 'Тестовый текст для поста_1',
-            'group': self.group_1.id,
+            'text': 'Тестовый текст для поста',
+            'group': self.group.id,
         }
         response = self.authorized_client.post(
             reverse('posts:post_create'),
@@ -47,13 +53,13 @@ class PostCreateFormTests(TestCase):
         )
         self.assertRedirects(
             response,
-            reverse('posts:profile', kwargs={'username': 'hasnoname'})
+            reverse('posts:profile', kwargs={'username': self.user.username})
         )
         self.assertEqual(Post.objects.count(), posts_count + 1)
         self.assertTrue(
             Post.objects.filter(
-                text='Тестовый текст для поста_1',
-                group=self.group_1
+                text='Тестовый текст для поста',
+                group=self.group
             ).exists()
         )
 
@@ -65,24 +71,73 @@ class PostCreateFormTests(TestCase):
         """
         posts_count = Post.objects.count()
         form_data = {
-            'text': 'Тестовый текст для поста_1',
-            'group': self.group_1.id,
+            'text': 'Тестовый текст для поста',
+            'group': self.group.id,
         }
         response = self.authorized_client.post(
-            reverse('posts:post_edit', kwargs={'post_id': '1'}),
+            reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
             data=form_data,
             follow=True,
         )
         self.assertRedirects(
             response,
-            reverse('posts:post_detail', kwargs={'post_id': '1'})
+            reverse('posts:post_detail', kwargs={'post_id': self.post.id})
         )
         self.assertEqual(Post.objects.count(), posts_count)
+        first_post = Post.objects.first()
         self.assertEqual(
-            Post.objects.first().text,
-            'Тестовый текст для поста_1'
+            first_post.text,
+            'Тестовый текст для поста'
         )
         self.assertEqual(
-            Post.objects.first().group.title,
-            'Название группы_1 для теста'
+            first_post.group.title,
+            'Название группы для теста'
         )
+
+    def test_form_post_edit_post_by_anonim(self):
+        """
+        Редактирование под анонимом (пост не должен изменить значения полей).
+        """
+        posts_count = Post.objects.count()
+        form_data = {
+            'text': 'Текст поста, отредактированного анонимом.',
+            'group': self.edited_group.id,
+        }
+        response = self.client.post(
+            reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
+            data=form_data,
+            follow=True,
+        )
+        self.assertRedirects(
+            response,
+            reverse('users:login') + '?next='
+            + reverse('posts:post_edit', kwargs={'post_id': self.post.id})
+        )
+        self.assertEqual(Post.objects.count(), posts_count)
+        edited_post = Post.objects.get(id=self.post.id)
+        self.assertNotEqual(edited_post.text, form_data['text'])
+        self.assertNotEqual(edited_post.group.id, form_data['group'])
+
+    def test_form_post_edit_post_by_noname(self):
+        """
+        Редактирование не автором (пост не должен изменить значения полей).
+        """
+        posts_count = Post.objects.count()
+        form_data = {
+            'text': 'Текст поста, отредактированного не автором.',
+            'group': self.edited_group.id,
+        }
+        self.authorized_client.force_login(self.another_user)
+        response = self.authorized_client.post(
+            reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
+            data=form_data,
+            follow=True,
+        )
+        self.assertRedirects(
+            response,
+            reverse('posts:post_detail', kwargs={'post_id': self.post.id})
+        )
+        self.assertEqual(Post.objects.count(), posts_count)
+        edited_post = Post.objects.get(id=self.post.id)
+        self.assertNotEqual(edited_post.text, form_data['text'])
+        self.assertNotEqual(edited_post.group.id, form_data['group'])

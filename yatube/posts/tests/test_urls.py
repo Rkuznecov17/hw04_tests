@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
+from django.urls import reverse
+from http import HTTPStatus
 
 from ..models import Group, Post
 
@@ -20,6 +22,25 @@ class TaskURLTests(TestCase):
             author=cls.user,
             text='Тестовая пост_Тестовая пост_Тестовая пост',
         )
+        cls.template_url_names = {
+            reverse('posts:index'): ['posts/index.html', HTTPStatus.OK],
+            reverse('posts:group_list', kwargs={'slug': cls.group.slug}):
+                ['posts/group_list.html', HTTPStatus.OK],
+            reverse('posts:profile', kwargs={'username': cls.user.username}):
+                ['posts/profile.html', HTTPStatus.OK],
+            reverse('posts:post_detail', kwargs={'post_id': cls.post.pk}):
+                ['posts/post_detail.html', HTTPStatus.OK],
+            reverse('posts:post_create'):
+                ['posts/create_post.html', HTTPStatus.FOUND],
+            reverse('posts:post_edit', kwargs={'post_id': cls.post.pk}):
+                ['posts/create_post.html', HTTPStatus.FOUND],
+        }
+
+    def test_unexisting_page_url_exists_at_desired_location(self):
+        """Страница не существует."""
+        response = self.guest_client.get('/unexisting_page/')
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+        self.assertTemplateUsed(response, 'core/404.html')
 
     def setUp(self):
         self.guest_client = Client()
@@ -27,47 +48,15 @@ class TaskURLTests(TestCase):
         self.authorized_client.force_login(self.user)
 
     def test_response_urls(self):
-        """Проверка доступности на страницы:
-        index, group_list, profile."""
-        url_names = [
-            '/',
-            '/group/test-group/',
-            '/profile/auth/',
-            '/posts/1/',
-        ]
-        for address in url_names:
+        """Проверка доступности на страниц."""
+        for address, template in self.template_url_names.items():
             with self.subTest(address=address):
                 response = self.guest_client.get(address)
-                self.assertEqual(response.status_code, 200)
-
-    def test_response_url_edit(self):
-        """Проверка доступности страницы редактирования поста,
-        авторизированным пользователем, не автором."""
-        response = self.authorized_client.get('/posts/1/edit/')
-        self.assertEqual(response.status_code, 200)
-
-    def test_response_url_create(self):
-        """Проверка доступности страницы редактирования поста,
-        при обращении автора."""
-        response = self.authorized_client.get('/create/')
-        self.assertEqual(response.status_code, 200)
-
-    def test_page_404(self):
-        """Если страница не найдена на сайте, возвращает код ответа 404."""
-        response = self.guest_client.get('/404/')
-        self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.status_code, template[1])
 
     def test_urls_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
-        template_url_names = {
-            '/': 'posts/index.html',
-            '/group/test-group/': 'posts/group_list.html',
-            '/profile/auth/': 'posts/profile.html',
-            '/posts/1/': 'posts/post_detail.html',
-            '/create/': 'posts/create_post.html',
-            '/posts/1/edit/': 'posts/create_post.html',
-        }
-        for address, template in template_url_names.items():
+        for address, template in self.template_url_names.items():
             with self.subTest(address=address):
                 response = self.authorized_client.get(address)
-                self.assertTemplateUsed(response, template)
+                self.assertTemplateUsed(response, template[0])
