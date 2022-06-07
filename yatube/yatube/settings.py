@@ -17,6 +17,8 @@ ALLOWED_HOSTS = [
     'testserver',
 ]
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 INSTALLED_APPS = [
     'about.apps.AboutConfig',
@@ -29,6 +31,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'sorl.thumbnail',
 ]
 
 MIDDLEWARE = [

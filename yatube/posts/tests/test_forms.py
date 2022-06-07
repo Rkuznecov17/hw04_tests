@@ -94,7 +94,7 @@ class PostCreateFormTests(TestCase):
             'Название группы для теста'
         )
 
-    def test_form_post_edit_post_by_anonim(self):
+    def test_form_post_edit_post_by_anonym(self):
         """
         Редактирование под анонимом (пост не должен изменить значения полей).
         """
